@@ -7,7 +7,8 @@
 package com.jackson42.play.ecv.internal;
 
 import com.jackson42.play.ecv.RouteExtractor;
-import com.jackson42.play.ecv.annotations.RouteParam;
+import com.jackson42.play.ecv.annotations.OptionalParam;
+import com.jackson42.play.ecv.annotations.RequiredParam;
 import com.jackson42.play.ecv.interfaces.ECValidationRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,22 +114,30 @@ public class MethodInstance {
                             this.annotationArgs.put(type, annotation);
                             continue;
                         }
-                        final RouteParam annotation = parameter.getAnnotation(RouteParam.class);
-                        if (annotation == null) {
-                            throw new RuntimeException(String.format("Invalid validation method. Missing @RouteParam on a parameters of the following method : %s", methodPath));
+                        final RequiredParam required = parameter.getAnnotation(RequiredParam.class);
+                        final OptionalParam optional = parameter.getAnnotation(OptionalParam.class);
+
+                        final String paramKey;
+                        if (required != null) {
+                            paramKey = required.value();
+                        } else if (optional != null) {
+                            paramKey = optional.value();
+                        } else {
+                            throw new RuntimeException(String.format("Invalid validation method. Missing @RequiredParam or @OptionalParam on a parameters of the following method : %s", methodPath));
                         }
+
                         if (!PathBindable.class.isAssignableFrom(parameter.getType())) {
                             throw new RuntimeException(
-                                String.format("Invalid validation method. On '%s', the object '%s' does not implement PathBindable.", methodPath, parameter.getType().getName())
+                                    String.format("Invalid validation method. On '%s', the object '%s' does not implement PathBindable.", methodPath, parameter.getType().getName())
                             );
                         }
-                        if (this.bindableArgs.containsKey(annotation.value()) && !this.bindableArgs.get(annotation.value()).getClass().equals(parameter.getType())) {
+                        if (this.bindableArgs.containsKey(paramKey) && !this.bindableArgs.get(paramKey).getClass().equals(parameter.getType())) {
                             throw new RuntimeException(
-                                String.format("Invalid validation method. Parameter '%s' expected to be '%s' in '%s'. But this parameter was already assigned to '%s'",
-                                    annotation.value(), parameter.getType().getName(), methodPath, this.bindableArgs.get(annotation.value()).getClass().getName())
+                                    String.format("Invalid validation method. Parameter '%s' expected to be '%s' in '%s'. But this parameter was already assigned to '%s'",
+                                            paramKey, parameter.getType().getName(), methodPath, this.bindableArgs.get(required.value()).getClass().getName())
                             );
                         }
-                        this.bindableArgs.put(annotation.value(), cachedBinder.getInstance((Class<? extends PathBindable>) parameter.getType()));
+                        this.bindableArgs.put(paramKey, cachedBinder.getInstance((Class<? extends PathBindable>) parameter.getType()));
                     }
                 }
             }
@@ -155,17 +164,7 @@ public class MethodInstance {
      */
     public CompletionStage<Result> validate(final Http.Request request) {
         final Map<String, String> extractedValues = RouteExtractor.extract(request);
-        final Map<String, Object> resolvedArgs = new HashMap<>();
-        for (final Map.Entry<String, PathBindable> entry : this.bindableArgs.entrySet()) {
-            if (!extractedValues.containsKey(entry.getKey())) {
-                throw new RuntimeException(String.format("Invalid validation method. Parameter '%s' has not been found on the route.", entry.getKey()));
-            }
-            try {
-                resolvedArgs.put(entry.getKey(), entry.getValue().bind(entry.getKey(), extractedValues.get(entry.getKey())));
-            } catch (final Exception ignore) {
-                resolvedArgs.put(entry.getKey(), null);
-            }
-        }
+        final Map<String, Object> resolvedArgs = this.argsToObj(extractedValues);
 
         for (final Map.Entry<Class<? extends ECValidationRule>, ECValidationRule> entry : this.securityRules.entrySet()) {
             final Class<? extends ECValidationRule> sClass = entry.getKey();
@@ -184,6 +183,27 @@ public class MethodInstance {
             }
         }
         return null;
+    }
+
+    /**
+     * Args to obj map.
+     *
+     * @param extractedValues the extracted values
+     * @return the map
+     */
+    private Map<String, Object> argsToObj(final Map<String, String> extractedValues) {
+        final Map<String, Object> args = new HashMap<>();
+        for (final Map.Entry<String, PathBindable> entry : this.bindableArgs.entrySet()) {
+            if (!extractedValues.containsKey(entry.getKey())) {
+                continue;
+            }
+            try {
+                args.put(entry.getKey(), entry.getValue().bind(entry.getKey(), extractedValues.get(entry.getKey())));
+            } catch (final Exception ignore) {
+                args.put(entry.getKey(), null);
+            }
+        }
+        return args;
     }
 
     /**
@@ -206,9 +226,20 @@ public class MethodInstance {
                 args.add(this.annotationArgs.get(parameter.getType()));
                 continue;
             }
-            final RouteParam annotation = parameter.getAnnotation(RouteParam.class);
-            if (resolvedArgs.containsKey(annotation.value())) {
-                args.add(resolvedArgs.get(annotation.value()));
+            final RequiredParam required = parameter.getAnnotation(RequiredParam.class);
+            final OptionalParam optional = parameter.getAnnotation(OptionalParam.class);
+
+            if (required != null) {
+                if (resolvedArgs.containsKey(required.value())) {
+                    args.add(resolvedArgs.get(required.value()));
+                } else {
+                    throw new RuntimeException(String.format("Invalid validation method. Parameter '%s' has not been found on the route.", required.value()));
+                }
+            } else if (optional != null) {
+                args.add(resolvedArgs.getOrDefault(optional.value(), null));
+            } else {
+                final String methodPath = method.getDeclaringClass().getName() + "." + method.getName();
+                throw new RuntimeException(String.format("Invalid validation method. Missing @RequiredParam or @OptionalParam on a parameters of the following method : %s", methodPath));
             }
         }
 

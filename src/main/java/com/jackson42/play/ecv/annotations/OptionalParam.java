@@ -12,14 +12,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * RouteParam.
+ * RequiredParam.
  *
  * @author Pierre Adam
  * @since 19.05.09
  */
 @Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RouteParam {
+public @interface OptionalParam {
 
     /**
      * The name of the variable on the route.
