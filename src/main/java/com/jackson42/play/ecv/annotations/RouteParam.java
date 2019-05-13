@@ -20,5 +20,11 @@ import java.lang.annotation.Target;
 @Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RouteParam {
+
+    /**
+     * The name of the variable on the route.
+     *
+     * @return the name of the variable on the route
+     */
     String value();
 }

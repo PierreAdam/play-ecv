@@ -6,7 +6,7 @@
 
 package com.jackson42.play.ecv.internal;
 
-import com.jackson42.play.ecv.interfaces.SecurityRule;
+import com.jackson42.play.ecv.interfaces.ECValidationRule;
 import play.Application;
 
 /**
@@ -15,7 +15,7 @@ import play.Application;
  * @author Pierre Adam
  * @since 19.05.10
  */
-public class CachedSecurityRule extends ClassCache<SecurityRule> {
+public class CachedSecurityRule extends ClassCache<ECValidationRule> {
 
     /**
      * Instantiates a new Cached binder.

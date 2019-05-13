@@ -14,5 +14,5 @@ package com.jackson42.play.ecv.interfaces;
  * @author Pierre Adam
  * @since 19.05.10
  */
-public interface SecurityRule {
+public interface ECValidationRule {
 }

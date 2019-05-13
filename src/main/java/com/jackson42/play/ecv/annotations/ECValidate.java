@@ -7,7 +7,7 @@
 package com.jackson42.play.ecv.annotations;
 
 import com.jackson42.play.ecv.ECValidateImpl;
-import com.jackson42.play.ecv.interfaces.SecurityRule;
+import com.jackson42.play.ecv.interfaces.ECValidationRule;
 import play.mvc.With;
 
 import java.lang.annotation.ElementType;
@@ -25,5 +25,11 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ECValidate {
-    Class<? extends SecurityRule>[] value() default {};
+    
+    /**
+     * The list of validation rules.
+     *
+     * @return the list of validation rules
+     */
+    Class<? extends ECValidationRule>[] value() default {};
 }

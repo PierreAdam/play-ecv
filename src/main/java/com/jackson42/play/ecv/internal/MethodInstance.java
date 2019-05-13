@@ -8,7 +8,7 @@ package com.jackson42.play.ecv.internal;
 
 import com.jackson42.play.ecv.RouteExtractor;
 import com.jackson42.play.ecv.annotations.RouteParam;
-import com.jackson42.play.ecv.interfaces.SecurityRule;
+import com.jackson42.play.ecv.interfaces.ECValidationRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import play.api.routing.HandlerDef;
@@ -47,7 +47,7 @@ public class MethodInstance {
     /**
      * The Bindable args.
      */
-    private final Map<Class<? extends SecurityRule>, SecurityRule> securityRules;
+    private final Map<Class<? extends ECValidationRule>, ECValidationRule> securityRules;
 
     /**
      * The Bindable args.
@@ -62,7 +62,7 @@ public class MethodInstance {
      * @param cachedBinder       the cached binder
      * @param cachedSecurityRule the cached security rule
      */
-    public MethodInstance(final Class<? extends SecurityRule>[] securityRules, final HandlerDef handlerDef,
+    public MethodInstance(final Class<? extends ECValidationRule>[] securityRules, final HandlerDef handlerDef,
                           final CachedBinder cachedBinder, final CachedSecurityRule cachedSecurityRule) {
         this.bindableArgs = new HashMap<>();
         this.securityRules = new HashMap<>();
@@ -78,7 +78,7 @@ public class MethodInstance {
      * @param cachedBinder  the cached binder
      * @param handlerDef    the handler def
      */
-    private void resolveArgs(final Class<? extends SecurityRule>[] securityRules, final CachedBinder cachedBinder, final HandlerDef handlerDef) {
+    private void resolveArgs(final Class<? extends ECValidationRule>[] securityRules, final CachedBinder cachedBinder, final HandlerDef handlerDef) {
         Method controllerMethod = null;
         try {
             final Class<?> cClass = handlerDef.classLoader().loadClass(handlerDef.controller());
@@ -97,7 +97,7 @@ public class MethodInstance {
             throw new RuntimeException(String.format("Unable to find the method %s in %s", handlerDef.method(), handlerDef.controller()));
         }
 
-        for (final Class<? extends SecurityRule> securityRule : securityRules) {
+        for (final Class<? extends ECValidationRule> securityRule : securityRules) {
             for (final Method method : securityRule.getMethods()) {
                 if (method.getName().startsWith("validate") && method.getReturnType().equals(CompletionStage.class)) {
                     final String methodPath = securityRule.getName() + "." + method.getName();
@@ -141,8 +141,8 @@ public class MethodInstance {
      * @param securityRules      the security rules
      * @param cachedSecurityRule the cached security rule
      */
-    private void feedSecurityRules(final Class<? extends SecurityRule>[] securityRules, final CachedSecurityRule cachedSecurityRule) {
-        for (final Class<? extends SecurityRule> securityRule : securityRules) {
+    private void feedSecurityRules(final Class<? extends ECValidationRule>[] securityRules, final CachedSecurityRule cachedSecurityRule) {
+        for (final Class<? extends ECValidationRule> securityRule : securityRules) {
             this.securityRules.put(securityRule, cachedSecurityRule.getInstance(securityRule));
         }
     }
@@ -167,9 +167,9 @@ public class MethodInstance {
             }
         }
 
-        for (final Map.Entry<Class<? extends SecurityRule>, SecurityRule> entry : this.securityRules.entrySet()) {
-            final Class<? extends SecurityRule> sClass = entry.getKey();
-            final SecurityRule instance = entry.getValue();
+        for (final Map.Entry<Class<? extends ECValidationRule>, ECValidationRule> entry : this.securityRules.entrySet()) {
+            final Class<? extends ECValidationRule> sClass = entry.getKey();
+            final ECValidationRule instance = entry.getValue();
             for (final Method method : sClass.getDeclaredMethods()) {
                 if (method.getName().startsWith("validate") && method.getReturnType().equals(CompletionStage.class)) {
                     try {
